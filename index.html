@@ -1,11 +1,1309 @@
 <!DOCTYPE html>
-<html>
-  <head>
-<link rel="shortcut icon" type="image/jpg" href="https://images.app.goo.gl/GboN1YGVbuWq2Nnb9">    <title>AliExpress</title> 
-  </head>
-<img src="https://iplogger.com/1oBrY" alt="Insert image description here">
-<script>
-setTimeout ( function () { window . location  =  "https://s.click.aliexpress.com/e/_DBlCal3" }, 1 );
-</script>
-  </body>
-</html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aqua Transistor Studio</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+      color: #333;
+      font-family: 'Segoe UI', 'Verdana', sans-serif;
+      touch-action: none;
+      overflow: hidden;
+      position: relative;
+    }
+    #canvas, #threeCanvas {
+      border: 2px solid #4a90e2;
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+      aspect-ratio: 8 / 5;
+    }
+    #threeCanvas { display: none; }
+    #output img { max-width: 100%; border-radius: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+    .tooltip {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      color: #4a90e2;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .control-panel {
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 350px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+    .tabs { display: flex; border-bottom: 2px solid #4a90e2; margin-bottom: 1rem; }
+    .tab {
+      flex: 1;
+      padding: 0.75rem;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.3s;
+      border-radius: 8px 8px 0 0;
+      font-weight: bold;
+      color: #4a90e2;
+    }
+    .tab.active { background: #4a90e2; color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .button-group { margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 255, 255, 0.2); border-radius: 8px; }
+    button {
+      transition: all 0.3s;
+      background: linear-gradient(45deg, #4a90e2, #7dc1ff);
+      padding: 0.75rem;
+      font-size: 1rem;
+      width: 100%;
+      border-radius: 8px;
+      color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    button::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.5s;
+    }
+    button:hover::before { transform: translate(-50%, -50%) scale(1); }
+    button:hover { transform: scale(1.03); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); }
+    .theme-toggle { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+    .example-btn { background: linear-gradient(45deg, #ff6b6b, #ff8e53); }
+    .aqua-text { text-shadow: 0 0 5px #7dc1ff, 0 0 10px #4a90e2; }
+    .comparison-panel {
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: fixed;
+      right: 20px;
+      top: 20px;
+      width: 350px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    input, select {
+      font-size: 1rem;
+      padding: 0.6rem;
+      width: 100%;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.5);
+      color: #333;
+      border: 1px solid #4a90e2;
+    }
+    #progressBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 4px;
+      background: #4a90e2;
+      transition: width 0.3s;
+      z-index: 1000;
+    }
+    .selected { animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 5px #4a90e2; } 50% { box-shadow: 0 0 15px #7dc1ff; } 100% { box-shadow: 0 0 5px #4a90e2; } }
+    #scrollBar {
+      position: fixed;
+      right: 10px;
+      top: 20px;
+      width: 12px;
+      height: calc(100vh - 40px);
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    #scrollBar:hover, #scrollBar.active { opacity: 1; }
+    #scrollThumb {
+      width: 100%;
+      background: linear-gradient(45deg, #4a90e2, #7dc1ff);
+      border-radius: 6px;
+      position: absolute;
+      transition: top 0.2s;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .accordion-header {
+      background: linear-gradient(45deg, #4a90e2, #7dc1ff);
+      padding: 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      color: white;
+      margin-bottom: 0.5rem;
+    }
+    .accordion-content { display: none; padding: 1rem; background: rgba(255, 255, 255, 0.2); border-radius: 8px; }
+    .accordion-content.active { display: block; }
+    .bubble {
+      position: absolute;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    @media (max-width: 768px) {
+      .control-panel {
+        position: static;
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 1rem;
+      }
+      .comparison-panel { position: static; width: 100%; }
+      #canvas, #threeCanvas { max-width: 100%; }
+      button, input, select { font-size: 0.9rem; padding: 0.6rem; }
+      h1 { font-size: 1.5rem; }
+      h2 { font-size: 1.25rem; }
+      #scrollBar { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { button::before, button:hover, .bubble { transition: none; animation: none; } }
+  </style>
+</head>
+<body>
+  <div id="progressBar"></div>
+  <div id="scrollBar">
+    <div id="scrollThumb" style="height: 100px; top: 0;"></div>
+  </div>
+  <div class="max-w-7xl mx-auto flex flex-col gap-8">
+    <button onclick="toggleTheme()" class="theme-toggle bg-blue-600 text-white py-2 px-4 rounded">Тёмная/Светлая тема</button>
+    <h1 class="text-4xl font-bold text-center mb-8 aqua-text">Aqua Transistor Studio</h1>
+    <div class="flex flex-col md:flex-row gap-8">
+      <div class="control-panel shadow-xl">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('constructor')">Конструктор</div>
+          <div class="tab" onclick="switchTab('simulation')">Симуляция</div>
+          <div class="tab" onclick="switchTab('export')">Экспорт</div>
+          <div class="tab" onclick="switchTab('preview')">3D и Примеры</div>
+        </div>
+        <div id="constructor" class="tab-content active">
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Компоненты</h3>
+            <label class="block text-sm font-medium mb-2">Добавить компонент:</label>
+            <select id="component" class="mb-2">
+              <option value="2D-Layer">Слой 2D-материала</option>
+              <option value="Source">Исток</option>
+              <option value="Drain">Сток</option>
+              <option value="Gate">Затвор</option>
+            </select>
+            <button onclick="addComponent()">Добавить компонент</button>
+          </div>
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Материалы</h3>
+            <label class="block text-sm font-medium mb-2">Материал слоя:</label>
+            <select id="material">
+              <option value="Graphene">Графен</option>
+              <option value="MoS2">MoS₂</option>
+              <option value="BN">h-BN (диэлектрик)</option>
+              <option value="WSe2">WSe₂</option>
+            </select>
+            <label class="block text-sm font-medium mb-2 mt-2">Толщина слоя (нм):</label>
+            <input id="thickness" type="number" step="0.1" value="0.7" />
+          </div>
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Подложка</h3>
+            <label class="block text-sm font-medium mb-2">Подложка:</label>
+            <select id="substrate">
+              <option value="SiO2">SiO₂ (ε=3.9)</option>
+              <option value="Al2O3">Al₂O₃ (ε=9.0)</option>
+            </select>
+          </div>
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Параметры</h3>
+            <label class="block text-sm font-medium mb-2">Подвижность (см²/В·с):</label>
+            <input id="mobility" type="number" value="1000" oninput="previewParameters()" />
+            <label class="block text-sm font-medium mb-2 mt-2">Напряжение затвора (В):</label>
+            <input id="gateVoltage" type="number" step="0.1" value="1.5" oninput="previewParameters()" />
+            <label class="block text-sm font-medium mb-2 mt-2">Легирование (см⁻²):</label>
+            <input id="doping" type="number" value="1e12" oninput="previewParameters()" />
+            <label class="block text-sm font-medium mb-2 mt-2">Температура (К):</label>
+            <input id="temperature" type="number" value="300" oninput="previewParameters()" />
+            <label class="block text-sm font-medium mb-2 mt-2">Дефекты (см⁻²):</label>
+            <input id="defects" type="number" value="1e10" oninput="previewParameters()" />
+          </div>
+        </div>
+        <div id="simulation" class="tab-content">
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Симуляция</h3>
+            <button onclick="runSimulation()">Запустить симуляцию</button>
+            <button onclick="optimizeParameters()" class="mt-2">Оптимизировать</button>
+            <button onclick="startGame()" class="mt-2">Игра: Тюнинг транзистора</button>
+            <div id="preview" class="text-sm text-blue-600 mt-4"></div>
+          </div>
+        </div>
+        <div id="export" class="tab-content">
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Сохранение и сравнение</h3>
+            <button onclick="saveSimulation()">Сохранить симуляцию</button>
+            <button onclick="toggleComparison()" class="mt-2">Сравнить симуляции</button>
+          </div>
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Экспорт</h3>
+            <button onclick="exportPDF()">Экспорт PDF</button>
+            <button onclick="exportData()" class="mt-2">Экспорт CSV</button>
+            <button onclick="exportGDSII()" class="mt-2">Экспорт GDSII JSON</button>
+          </div>
+        </div>
+        <div id="preview" class="tab-content">
+          <div class="button-group">
+            <h3 class="text-lg font-semibold mb-2">Превью и примеры</h3>
+            <button onclick="toggle3DView()">3D-превью</button>
+            <button onclick="loadExample()" class="example-btn mt-2">Загрузить пример</button>
+          </div>
+        </div>
+        <div id="error" class="text-red-500 mt-4 hidden"></div>
+      </div>
+      <div class="w-full flex flex-col items-center">
+        <canvas id="canvas"></canvas>
+        <canvas id="threeCanvas"></canvas>
+        <div id="output" class="mt-6 w-full max-w-3xl"></div>
+        <div id="comparison" class="comparison-panel">
+          <h2 class="text-2xl font-semibold mb-4">Сравнение симуляций</h2>
+          <button onclick="toggleComparison()" class="bg-red-500 text-white py-2 px-4 rounded mb-4">Закрыть</button>
+          <div id="comparisonOutput"></div>
+        </div>
+        <div class="mt-8 w-full max-w-3xl bg-white bg-opacity-20 p-6 rounded-lg shadow-xl">
+          <h2 class="text-2xl font-semibold mb-4 aqua-text">Руководство и подсказки</h2>
+          <div class="accordion">
+            <div class="accordion-header" onclick="toggleAccordion(this)">Основы</div>
+            <div class="accordion-content">
+              <p class="text-sm mb-2">1. Перетаскивайте компоненты пальцем/мышкой, масштабируйте двумя пальцами/колесом.</p>
+              <p class="text-sm mb-2">2. Кликните на карту зарядов для плотности.</p>
+            </div>
+            <div class="accordion-header" onclick="toggleAccordion(this)">Игра</div>
+            <div class="accordion-content">
+              <p class="text-sm mb-2">3. Играйте в "Тюнинг транзистора" для достижения ON/OFF > 10⁶.</p>
+              <p class="text-sm mb-2">4. Проверяйте предпросмотр тока при изменении параметров.</p>
+            </div>
+            <div class="accordion-header" onclick="toggleAccordion(this)">Экспорт</div>
+            <div class="accordion-content">
+              <p class="text-sm mb-2">5. Сохраняйте и сравнивайте симуляции.</p>
+              <p class="text-sm mb-2">6. Экспортируйте в PDF, CSV, GDSII.</p>
+            </div>
+            <div class="accordion-header" onclick="toggleAccordion(this)">Подсказка</div>
+            <div class="accordion-content">
+              <p class="text-sm font-semibold text-blue-600">Подсказка: Понизьте температуру и дефекты для квантовой проводимости!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Инициализация IndexedDB
+    const dbPromise = indexedDB.open("TransistorSim", 1);
+    dbPromise.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      db.createObjectStore("simulations", { keyPath: "id" });
+    };
+
+    // Инициализация Web Worker
+    const worker = new Worker(URL.createObjectURL(new Blob([`
+      self.importScripts('https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js');
+      let pyodide;
+      async function initPyodide() {
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage(["numpy", "matplotlib"]);
+      }
+      self.onmessage = async (e) => {
+        if (!pyodide) await initPyodide();
+        const { code, id } = e.data;
+        try {
+          const result = await pyodide.runPythonAsync(code);
+          self.postMessage({ id, result });
+        } catch (err) {
+          self.postMessage({ id, error: err.message });
+        }
+      };
+    `], { type: "text/javascript" })));
+
+    // Оптимизация рендеринга
+    let lastRender = 0;
+    let renderRequested = false;
+    function requestRender() {
+      if (!renderRequested) {
+        renderRequested = true;
+        requestAnimationFrame((time) => {
+          if (time - lastRender >= 16) {
+            drawCanvas();
+            lastRender = time;
+          }
+          renderRequested = false;
+        });
+      }
+    }
+
+    let components = [];
+    let dragging = null;
+    let simulations = [];
+    let is3DView = false;
+    let particles = [];
+    let bubbles = [];
+    let touchState = { fingers: 0, startDist: 0, startAngle: 0, target: null };
+    let selectedComponent = null;
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const threeCanvas = document.getElementById("threeCanvas");
+    let scene, camera, renderer, controls;
+    const progressBar = document.getElementById("progressBar");
+    const scrollBar = document.getElementById("scrollBar");
+    const scrollThumb = document.getElementById("scrollThumb");
+
+    // Анимация пузырьков
+    function createBubble() {
+      const size = Math.random() * 20 + 10;
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.style.width = `${size}px`;
+      bubble.style.height = `${size}px`;
+      bubble.style.left = `${Math.random() * window.innerWidth}px`;
+      bubble.style.bottom = `-${size}px`;
+      document.body.appendChild(bubble);
+      bubbles.push({ el: bubble, y: window.innerHeight + size, vy: -(Math.random() * 2 + 1) });
+      setTimeout(() => {
+        bubble.remove();
+        bubbles = bubbles.filter(b => b.el !== bubble);
+      }, 5000);
+    }
+    setInterval(createBubble, 1000);
+
+    function animateBubbles() {
+      bubbles.forEach(b => {
+        b.y += b.vy;
+        b.el.style.transform = `translateY(-${b.y}px)`;
+      });
+      requestAnimationFrame(animateBubbles);
+    }
+    animateBubbles();
+
+    // Ползунок навигации
+    let isScrolling = false;
+    function updateScrollThumb() {
+      const contentHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const thumbHeight = Math.max(50, (window.innerHeight / document.documentElement.scrollHeight) * scrollBar.offsetHeight);
+      scrollThumb.style.height = `${thumbHeight}px`;
+      const scrollRatio = window.scrollY / contentHeight;
+      const maxTop = scrollBar.offsetHeight - thumbHeight;
+      scrollThumb.style.top = `${scrollRatio * maxTop}px`;
+    }
+
+    window.addEventListener("scroll", updateScrollThumb);
+    window.addEventListener("resize", updateScrollThumb);
+
+    scrollBar.addEventListener("mousedown", (e) => {
+      isScrolling = true;
+      scrollBar.classList.add("active");
+      handleScroll(e);
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (isScrolling) handleScroll(e);
+    });
+
+    document.addEventListener("mouseup", () => {
+      isScrolling = false;
+      scrollBar.classList.remove("active");
+    });
+
+    scrollBar.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      isScrolling = true;
+      scrollBar.classList.add("active");
+      handleScroll(e.touches[0]);
+    });
+
+    document.addEventListener("touchmove", (e) => {
+      if (isScrolling) {
+        e.preventDefault();
+        handleScroll(e.touches[0]);
+      }
+    });
+
+    document.addEventListener("touchend", () => {
+      isScrolling = false;
+      scrollBar.classList.remove("active");
+    });
+
+    function handleScroll(e) {
+      const rect = scrollBar.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const thumbHeight = scrollThumb.offsetHeight;
+      const maxTop = scrollBar.offsetHeight - thumbHeight;
+      const scrollRatio = Math.min(1, Math.max(0, y / maxTop));
+      const contentHeight = document.documentElement.scrollHeight - window.innerHeight;
+      window.scrollTo(0, scrollRatio * contentHeight);
+    }
+
+    // Адаптация размера канваса
+    function resizeCanvas() {
+      const width = Math.min(window.innerWidth - 40, 800);
+      canvas.width = width;
+      canvas.height = width * 5 / 8;
+      threeCanvas.width = width;
+      threeCanvas.height = width * 5 / 8;
+      requestRender();
+      updateScrollThumb();
+    }
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    resizeCanvas();
+
+    // Тёмная/светлая тема
+    function toggleTheme() {
+      document.body.classList.toggle("bg-gray-800");
+      document.body.classList.toggle("text-white");
+      document.body.style.background = document.body.classList.contains("bg-gray-800") 
+        ? "linear-gradient(135deg, #0d1b2a, #1b263b)" 
+        : "linear-gradient(135deg, #a1c4fd, #c2e9fb)";
+    }
+
+    // Вкладки
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+      document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add("active");
+      document.getElementById(tabId).classList.add("active");
+    }
+
+    // Аккордеон
+    function toggleAccordion(header) {
+      const content = header.nextElementSibling;
+      content.classList.toggle("active");
+    }
+
+    // Добавление компонента
+    function addComponent() {
+      const type = document.getElementById("component").value;
+      const material = document.getElementById("material").value;
+      const thickness = parseFloat(document.getElementById("thickness").value);
+      let width, height, color;
+      if (type === "2D-Layer") {
+        width = 300;
+        height = 60;
+        color = material === "Graphene" ? "#999" : material === "MoS2" ? "#2ecc71" : material === "BN" ? "#00d4ff" : "#9b59b6";
+      } else if (type === "Source" || type === "Drain") {
+        width = 40;
+        height = 40;
+        color = "#bdc3c7";
+      } else if (type === "Gate") {
+        width = 300;
+        height = 30;
+        color = "#f1c40f";
+      }
+      components.push({
+        type,
+        x: 50,
+        y: 50,
+        width,
+        height,
+        color,
+        material: type === "2D-Layer" ? material : null,
+        thickness: type === "2D-Layer" ? thickness : null,
+        scale: 1,
+        rotation: 0
+      });
+      selectedComponent = components[components.length - 1];
+      requestRender();
+    }
+
+    // Отрисовка канваса
+    function drawCanvas() {
+      const temperature = parseFloat(document.getElementById("temperature").value) || 300;
+      const tempColor = temperature < 200 ? `rgba(74, 144, 226, 0.3)` : temperature > 400 ? `rgba(255, 99, 99, 0.3)` : `rgba(125, 193, 255, 0.3)`;
+      ctx.fillStyle = tempColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      components.forEach(comp => {
+        ctx.save();
+        ctx.translate(comp.x + comp.width / 2, comp.y + comp.height / 2);
+        ctx.rotate(comp.rotation * Math.PI / 180);
+        ctx.scale(comp.scale, comp.scale);
+        ctx.fillStyle = comp.color;
+        ctx.shadowColor = comp === selectedComponent ? "#4a90e2" : "rgba(0, 0, 0, 0.2)";
+        ctx.shadowBlur = comp === selectedComponent ? 15 : 5;
+        ctx.fillRect(-comp.width / 2, -comp.height / 2, comp.width, comp.height);
+        ctx.strokeStyle = "#4a90e2";
+        ctx.strokeRect(-comp.width / 2, -comp.height / 2, comp.width, comp.height);
+        ctx.fillStyle = "#333";
+        ctx.font = "14px Segoe UI";
+        ctx.fillText(`${comp.type}${comp.material ? ` (${comp.material})` : ""}`, -comp.width / 2 + 10, -comp.height / 2 + 20);
+        ctx.restore();
+      });
+      // Анимация частиц
+      particles = particles.filter(p => p.life > 0);
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = `rgba(${temperature > 400 ? "255, 99, 99" : "74, 144, 226"}, ${p.life})`;
+        ctx.fill();
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.015;
+      });
+      if (components.some(c => c.type === "Source") && components.some(c => c.type === "Drain")) {
+        const source = components.find(c => c.type === "Source");
+        const drain = components.find(c => c.type === "Drain");
+        const current = simulations.length > 0 ? simulations[simulations.length - 1].currents[50] : 1;
+        const particleRate = Math.min(0.1, current / 200);
+        if (Math.random() < particleRate) {
+          particles.push({
+            x: source.x + source.width / 2,
+            y: source.y + source.height / 2,
+            vx: (drain.x - source.x) / 100,
+            vy: (drain.y - source.y) / 100,
+            life: 1
+          });
+        }
+      }
+      if (!is3DView) requestRender();
+    }
+
+    // 3D-превью
+    async function loadThreeJS() {
+      if (!window.THREE) {
+        await new Promise(resolve => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js";
+          script.onload = resolve;
+          document.head.appendChild(script);
+        });
+        await new Promise(resolve => {
+          const script = document.createElement("script");
+          script.src = "https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js";
+          script.onload = resolve;
+          document.head.appendChild(script);
+        });
+      }
+    }
+
+    function init3D() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, threeCanvas.width / threeCanvas.height, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true });
+      renderer.setSize(threeCanvas.width, threeCanvas.height);
+      camera.position.z = 5;
+      components.forEach(comp => {
+        const geometry = new THREE.BoxGeometry(comp.width / 100, comp.height / 100, (comp.thickness || 0.1) / 10);
+        const material = new THREE.MeshPhongMaterial({ color: comp.color, shininess: 100, transparent: true, opacity: 0.8 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(comp.x / 100 - 4, comp.y / 100 - 2.5, 0);
+        mesh.rotation.z = comp.rotation * Math.PI / 180;
+        scene.add(mesh);
+      });
+      const light = new THREE.DirectionalLight(0xffffff, 0.8);
+      light.position.set(5, 5, 5);
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0x404040));
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      animate3D();
+    }
+
+    function animate3D() {
+      if (is3DView) {
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate3D);
+      }
+    }
+
+    async function toggle3DView() {
+      is3DView = !is3DView;
+      canvas.style.display = is3DView ? "none" : "block";
+      threeCanvas.style.display = is3DView ? "block" : "none";
+      if (is3DView && !scene) {
+        await loadThreeJS();
+        init3D();
+      }
+      if (is3DView) animate3D();
+      else requestRender();
+    }
+
+    // Обработка мыши и тача
+    function getCanvasPosition(event, touch = false) {
+      const rect = canvas.getBoundingClientRect();
+      const x = touch ? event.touches[0].clientX - rect.left : event.clientX - rect.left;
+      const y = touch ? event.touches[0].clientY - rect.top : event.clientY - rect.top;
+      return { x, y };
+    }
+
+    function findComponent(x, y) {
+      return components.find(comp => {
+        const dx = x - (comp.x + comp.width / 2);
+        const dy = y - (comp.y + comp.height / 2);
+        const cos = Math.cos(-comp.rotation * Math.PI / 180);
+        const sin = Math.sin(-comp.rotation * Math.PI / 180);
+        const rx = (dx * cos - dy * sin) / comp.scale;
+        const ry = (dx * sin + dy * cos) / comp.scale;
+        return Math.abs(rx) < comp.width / 2 && Math.abs(ry) < comp.height / 2;
+      });
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+      const { x, y } = getCanvasPosition(e);
+      dragging = findComponent(x, y);
+      selectedComponent = dragging;
+      requestRender();
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+      const { x, y } = getCanvasPosition(e);
+      const comp = findComponent(x, y);
+      const tooltip = document.querySelector(".tooltip");
+      if (comp) {
+        tooltip.style.left = `${e.clientX + 10}px`;
+        tooltip.style.top = `${e.clientY + 10}px`;
+        tooltip.textContent = `${comp.type}${comp.material ? ` (${comp.material}, ${comp.thickness} нм)` : ""}`;
+        tooltip.style.display = "block";
+      } else {
+        tooltip.style.display = "none";
+      }
+      if (dragging) {
+        dragging.x = x - dragging.width * dragging.scale / 2;
+        dragging.y = y - dragging.height * dragging.scale / 2;
+        requestRender();
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      dragging = null;
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      const { x, y } = getCanvasPosition(e);
+      const comp = findComponent(x, y);
+      if (comp) {
+        comp.scale = Math.max(0.5, Math.min(2, comp.scale + (e.deltaY > 0 ? -0.1 : 0.1)));
+        requestRender();
+      }
+    });
+
+    // Тач-события
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const touches = e.touches;
+      if (touches.length === 1) {
+        const { x, y } = getCanvasPosition(e, true);
+        dragging = findComponent(x, y);
+        selectedComponent = dragging;
+      } else if (touches.length === 2) {
+        const { x: x1, y: y1 } = getCanvasPosition({ touches: [touches[0]] }, true);
+        const { x: x2, y: y2 } = getCanvasPosition({ touches: [touches[1]] }, true);
+        touchState.fingers = 2;
+        touchState.startDist = Math.hypot(x2 - x1, y2 - y1);
+        touchState.startAngle = Math.atan2(y2 - y1, x2 - x1);
+        touchState.target = findComponent((x1 + x2) / 2, (y1 + y2) / 2);
+      }
+      requestRender();
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const touches = e.touches;
+      const tooltip = document.querySelector(".tooltip");
+      if (touches.length === 1 && dragging) {
+        const { x, y } = getCanvasPosition(e, true);
+        dragging.x = x - dragging.width * dragging.scale / 2;
+        dragging.y = y - dragging.height * dragging.scale / 2;
+        tooltip.style.left = `${touches[0].clientX + 10}px`;
+        tooltip.style.top = `${touches[0].clientY + 10}px`;
+        tooltip.textContent = `${dragging.type}${dragging.material ? ` (${dragging.material}, ${dragging.thickness} нм)` : ""}`;
+        tooltip.style.display = "block";
+        requestRender();
+      } else if (touches.length === 2 && touchState.fingers === 2 && touchState.target) {
+        const { x: x1, y: y1 } = getCanvasPosition({ touches: [touches[0]] }, true);
+        const { x: x2, y: y2 } = getCanvasPosition({ touches: [touches[1]] }, true);
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        touchState.target.scale = Math.max(0.5, Math.min(2, touchState.target.scale * (dist / touchState.startDist)));
+        touchState.target.rotation += (angle - touchState.startAngle) * 180 / Math.PI;
+        touchState.startDist = dist;
+        touchState.startAngle = angle;
+        tooltip.style.display = "none";
+        requestRender();
+      }
+    });
+
+    canvas.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      dragging = null;
+      touchState.fingers = 0;
+      touchState.target = null;
+      document.querySelector(".tooltip").style.display = "none";
+      requestRender();
+    });
+
+    // Интерактивная карта зарядов
+    document.getElementById("output").addEventListener("click", async (e) => {
+      if (simulations.length === 0) return;
+      const img = e.target.closest("img");
+      if (!img) return;
+      const rect = img.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      if (x >= 0.05 && x <= 0.45 && y >= 0.55 && y <= 0.95) {
+        const X = (x - 0.05) / 0.4 * 2 - 1;
+        const Y = (y - 0.55) / 0.4 * 1 - 0.5;
+        const doping = parseFloat(document.getElementById("doping").value);
+        const Z = Math.exp(-(X**2 + Y**2) / (0.5 + doping * 1e-12));
+        const tooltip = document.querySelector(".tooltip");
+        tooltip.style.left = `${e.clientX + 10}px`;
+        tooltip.style.top = `${e.clientY + 10}px`;
+        tooltip.textContent = `Плотность заряда: ${Z.toFixed(2)} усл. ед.`;
+        tooltip.style.display = "block";
+        setTimeout(() => tooltip.style.display = "none", 2000);
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (selectedComponent && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        selectedComponent.rotation += e.key === "ArrowLeft" ? -5 : 5;
+        requestRender();
+      }
+    });
+
+    // Предпросмотр параметров
+    function previewParameters() {
+      const mobility = parseFloat(document.getElementById("mobility").value) || 1000;
+      const gateVoltage = parseFloat(document.getElementById("gateVoltage").value) || 1.5;
+      const doping = parseFloat(document.getElementById("doping").value) || 1e12;
+      const temperature = parseFloat(document.getElementById("temperature").value) || 300;
+      const defects = parseFloat(document.getElementById("defects").value) || 1e10;
+      const layers = components.filter(c => c.type === "2D-Layer");
+      if (layers.length === 0) return;
+      const E_g_values = {"Graphene": 0.0, "MoS2": 1.8, "BN": 5.0, "WSe2": 1.2};
+      const E_g = layers.reduce((sum, c) => sum + E_g_values[c.material], 0) / layers.length;
+      const V_th = 0.5;
+      const mu_eff = mobility * (1 - defects * 1e-12) * (300 / temperature)**0.5;
+      const T_factor = E_g > 0 ? Math.exp(-E_g / (0.00008617 * temperature)) : 1.0;
+      const I_est = mu_eff * 7.96e-6 * (gateVoltage - V_th - E_g / 2) * 0.5 * (1 + doping * 1e-12) * T_factor;
+      document.getElementById("preview").textContent = `Оценка тока: ${(I_est > 0 ? I_est : 0).toFixed(2)} мкА`;
+    }
+
+    // Симуляция
+    async function runSimulation() {
+      const errorDiv = document.getElementById("error");
+      const outputDiv = document.getElementById("output");
+      errorDiv.classList.add("hidden");
+      outputDiv.innerHTML = "<p class='text-blue-600'>Выполняется симуляция...</p>";
+      progressBar.style.width = "20%";
+
+      // Проверка кэша
+      const simKey = JSON.stringify({ components, parameters: {
+        mobility: document.getElementById("mobility").value,
+        gateVoltage: document.getElementById("gateVoltage").value,
+        doping: document.getElementById("doping").value,
+        temperature: document.getElementById("temperature").value,
+        defects: document.getElementById("defects").value,
+        substrate: document.getElementById("substrate").value
+      }});
+      const db = await new Promise(resolve => dbPromise.onsuccess = e => resolve(e.target.result));
+      const tx = db.transaction("simulations", "readonly");
+      const store = tx.objectStore("simulations");
+      const cached = await new Promise(resolve => store.get(simKey).onsuccess = e => resolve(e.target.result));
+      if (cached) {
+        simulations.push(cached.data);
+        outputDiv.innerHTML = `<img src="data:image/png;base64,${cached.data.img_base64}" alt="Результат симуляции" />`;
+        localStorage.setItem("transistor_csv", cached.data.csv_data);
+        localStorage.setItem("transistor_gdsii", cached.data.gdsii_data);
+        if (simulations.length > 1) document.getElementById("comparison").classList.remove("hidden");
+        progressBar.style.width = "0";
+        return;
+      }
+
+      // Валидация компонентов
+      const layers = components.filter(c => c.type === "2D-Layer");
+      if (layers.length === 0) {
+        errorDiv.textContent = "Добавьте хотя бы один слой 2D-материала!";
+        errorDiv.classList.remove("hidden");
+        outputDiv.innerHTML = "";
+        progressBar.style.width = "0";
+        return;
+      }
+      if (!components.some(c => c.type === "Source") || !components.some(c => c.type === "Drain")) {
+        errorDiv.textContent = "Добавьте исток и сток!";
+        errorDiv.classList.remove("hidden");
+        outputDiv.innerHTML = "";
+        progressBar.style.width = "0";
+        return;
+      }
+      if (!components.some(c => c.type === "Gate")) {
+        errorDiv.textContent = "Добавьте затвор!";
+        errorDiv.classList.remove("hidden");
+        outputDiv.innerHTML = "";
+        progressBar.style.width = "0";
+        return;
+      }
+
+      // Получение параметров
+      const mobility = parseFloat(document.getElementById("mobility").value);
+      const gateVoltage = parseFloat(document.getElementById("gateVoltage").value);
+      const doping = parseFloat(document.getElementById("doping").value);
+      const temperature = parseFloat(document.getElementById("temperature").value);
+      const defects = parseFloat(document.getElementById("defects").value);
+      const substrate = document.getElementById("substrate").value;
+
+      // Валидация параметров
+      if (isNaN(mobility) || isNaN(gateVoltage) || isNaN(doping) || isNaN(temperature) || isNaN(defects)) {
+        errorDiv.textContent = "Введите корректные числовые значения!";
+        errorDiv.classList.remove("hidden");
+        outputDiv.innerHTML = "";
+        progressBar.style.width = "0";
+        return;
+      }
+
+      // Валидация напряжения затвора
+      const E_g_values = {"Graphene": 0.0, "MoS2": 1.8, "BN": 5.0, "WSe2": 1.2};
+      const E_g = layers.reduce((sum, c) => sum + E_g_values[c.material], 0) / layers.length;
+      const V_th = 0.5;
+      if (gateVoltage < V_th + E_g / 2) {
+        errorDiv.textContent = `Напряжение затвора (${gateVoltage} В) должно быть больше ${V_th + E_g / 2} В для положительного тока!`;
+        errorDiv.classList.remove("hidden");
+        outputDiv.innerHTML = "";
+        progressBar.style.width = "0";
+        return;
+      }
+
+      // Python-код для симуляции
+      const pythonCode = `
+import numpy as np
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
+
+# Параметры
+materials = [${layers.map(c => `"${c.material}"`).join(",")}]
+thicknesses = [${layers.map(c => c.thickness).join(",")}]
+mobility = ${mobility}
+gate_voltage = ${gateVoltage}
+doping = ${doping}
+temperature = ${temperature}
+defects = ${defects}
+substrate = "${substrate}"
+C_ox_values = {"SiO2": 3.45e-6, "Al2O3": 7.96e-6}
+C_ox = C_ox_values[substrate]
+V_th = 0.5
+k_B = 8.617e-5
+q = 1.602e-19
+R_contact = 1e3
+schottky_barrier = 0.3
+G_0 = 7.748e-5  # Квантовая проводимость (2e²/h, См)
+
+# Запрещённая зона и подвижность
+E_g_values = {"Graphene": 0.0, "MoS2": 1.8, "BN": 5.0, "WSe2": 1.2}
+mu_values = {"Graphene": 20000, "MoS2": 200, "BN": 10, "WSe2": 150}
+E_g = np.mean([E_g_values[m] for m in materials])
+mu_base = np.mean([mu_values[m] for m in materials])
+mu_eff = ${mobility} * (1 - ${defects} * 1e-12) * (300 / ${temperature})**0.5
+
+# Температурный коэффициент
+T_factor = np.exp(-E_g / (k_B * ${temperature})) if E_g > 0 else 1.0
+# Упрощённый NEGF
+N = 10
+H = np.diag([E_g / 2] * N) + np.diag([0.1] * (N-1), 1) + np.diag([0.1] * (N-1), -1)
+T = np.exp(-np.linalg.eigvalsh(H).max() / (k_B * ${temperature}))
+# Туннельный коэффициент
+tunnel_coeff = T * np.exp(-np.sum(thicknesses) * 0.1 * E_g - schottky_barrier / (k_B * ${temperature})) / (1 + np.sum(thicknesses) * 0.1)
+# Спин-орбитальный вклад
+spin_coeff = 1.0 if "Graphene" in materials else 0.95
+
+# Симуляция тока
+voltages = np.linspace(0, 1, 100)
+currents = mu_eff * C_ox * (${gate_voltage} - V_th - E_g / 2) * voltages * (1 + ${doping} * 1e-12) * T_factor * tunnel_coeff * spin_coeff
+currents = currents / (1 + R_contact * currents / 1e6)
+# Тепловой шум
+thermal_noise = np.sqrt(4 * k_B * ${temperature} * 1e-9 / R_contact) * 1e6
+currents = np.maximum(currents + np.random.normal(0, thermal_noise, currents.shape), 0)
+
+# Ток в выключенном состоянии
+currents_off = mu_eff * C_ox * (0 - V_th - E_g / 2) * voltages * (1 + ${doping} * 1e-12) * T_factor * tunnel_coeff * spin_coeff
+currents_off = np.maximum(currents_off + np.random.normal(0, thermal_noise, currents_off.shape), 1e-10)
+on_off_ratio = np.max(currents) / np.max(currents_off) if np.max(currents_off) > 0 else 1e6
+
+# DIBL
+dibl = (currents[-1] - currents[0]) / (voltages[-1] - voltages[0]) / C_ox if C_ox > 0 else 0
+
+# Мощность и квантовая проводимость
+power = currents * voltages
+G_quantum = np.mean(currents / voltages) / G_0 if np.mean(voltages) > 0 else 0
+
+# Метрики
+efficiency = np.mean(currents) / (mu_eff * ${gate_voltage}) if ${gate_voltage} > 0 else 0
+subthreshold_slope = (np.log10(currents[10]) - np.log10(currents[1])) / (voltages[10] - voltages[1]) if currents[1] > 0 else 0
+freq_response = mu_eff / (np.sum(thicknesses) * 1e-9) * 1e-9
+
+# Визуализация
+fig = plt.figure(figsize=(15, 10))
+
+# Схема транзистора
+ax1 = plt.subplot(221)
+ax1.set_xlim(-2, 2)
+ax1.set_ylim(-1.5, 2)
+ax1.set_aspect('equal')
+${components.map(c => `
+ax1.add_patch(plt.Rectangle((${c.x / 100 - 1}, ${c.y / 100 - 0.5}), ${c.width / 100}, ${c.height / 100}, color="${c.color}", label="${c.type}${c.material ? ` (${c.material})` : ""}"))
+`).join('')}
+ax1.set_title('Схема транзистора')
+ax1.legend()
+ax1.set_xlabel('X ( усл. ед. )')
+ax1.set_ylabel('Y ( усл. ед. )')
+
+# График тока
+ax2 = plt.subplot(222)
+ax2.plot(voltages, currents, 'b-', label='I_ds (ON)')
+ax2.plot(voltages, currents_off, 'r--', label='I_ds (OFF)')
+ax2.set_title(f'ВАХ (КПД: {efficiency:.2f}, ON/OFF: {on_off_ratio:.2e})')
+ax2.set_xlabel('Напряжение сток-исток (В)')
+ax2.set_ylabel('Ток (мкА)')
+ax2.grid(True)
+ax2.legend()
+
+# Карта зарядов
+ax3 = plt.subplot(223)
+X, Y = np.meshgrid(np.linspace(-1, 1, 20), np.linspace(-0.5, 0.5, 20))
+Z = np.exp(-(X**2 + Y**2) / (0.5 + ${doping} * 1e-12))
+c = ax3.contourf(X, Y, Z, cmap='viridis')
+plt.colorbar(c, ax=ax3)
+ax3.set_title('Карта зарядов (клик для плотности)')
+ax3.set_xlabel('X ( усл. ед. )')
+ax3.set_ylabel('Y ( усл. ед. )')
+
+# Квантовая проводимость
+ax4 = plt.subplot(224)
+ax4.plot(voltages, currents / voltages / G_0, 'r-', label='Проводимость')
+ax4.set_title(f'Квантовая проводимость (DIBL: {dibl:.2f} мкА/В)')
+ax4.set_xlabel('Напряжение сток-исток (В)')
+ax4.set_ylabel('G / (2e²/h)')
+ax4.grid(True)
+ax4.legend()
+
+plt.tight_layout()
+
+# Сохранение изображения
+buf = BytesIO()
+plt.savefig(buf, format='png')
+buf.seek(0)
+img_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+plt.close()
+
+# Данные для экспорта
+csv_data = (
+  "V_ds (В),I_ds (мкА),Power (мкВт),G_quantum (2e²/h)\\n" + 
+  "\\n".join([f"{v:.2f},{c:.2f},{p:.2f},{g:.2f}" for v, c, p, g in zip(voltages, currents, power, currents / voltages / G_0)]) +
+  f"\\n\\nEfficiency: {efficiency:.2f}\\nSubthreshold Slope: {subthreshold_slope:.2f} decade/V\\nFrequency Response: {freq_response:.2f} GHz\\nON/OFF Ratio: {on_off_ratio:.2e}\\nDIBL: {dibl:.2f} мкА/В\\nQuantum Conductance: {G_quantum:.2f} (2e²/h)"
+)
+gdsii_data = {
+  "components": [${components.map(c => `{ "type": "${c.type}", "material": "${c.material || ''}", "x": ${c.x}, "y": ${c.y}, "width": ${c.width}, "height": ${c.height}, "thickness": ${c.thickness || 0} }`).join(",")}],
+  "parameters": {
+    "mobility": ${mobility},
+    "gate_voltage": ${gateVoltage},
+    "doping": ${doping},
+    "temperature": ${temperature},
+    "defects": ${defects},
+    "substrate": "${substrate}"
+  }
+}
+
+(img_base64, csv_data, str(gdsii_data), voltages.tolist(), currents.tolist(), currents_off.tolist(), power.tolist(), efficiency, subthreshold_slope, freq_response, on_off_ratio, dibl, G_quantum)
+`;
+
+      progressBar.style.width = "50%";
+      const simId = Date.now();
+      worker.onmessage = (e) => {
+        if (e.data.id !== simId) return;
+        progressBar.style.width = "100%";
+        setTimeout(() => progressBar.style.width = "0", 500);
+        if (e.data.error) {
+          errorDiv.textContent = "Ошибка симуляции: " + e.data.error;
+          errorDiv.classList.remove("hidden");
+          outputDiv.innerHTML = "";
+          return;
+        }
+        const [img_base64, csv_data, gdsii_data, voltages, currents, currents_off, power, efficiency, subthreshold_slope, freq_response, on_off_ratio, dibl, G_quantum] = e.data.result;
+        const simData = { voltages, currents, currents_off, power, efficiency, subthreshold_slope, freq_response, on_off_ratio, dibl, G_quantum, img_base64, csv_data, gdsii_data };
+        simulations.push(simData);
+        outputDiv.innerHTML = `<img src="data:image/png;base64,${img_base64}" alt="Результат симуляции" />`;
+        localStorage.setItem("transistor_csv", csv_data);
+        localStorage.setItem("transistor_gdsii", gdsii_data);
+        if (simulations.length > 1) document.getElementById("comparison").classList.remove("hidden");
+        // Сохранение в кэш
+        const tx = db.transaction("simulations", "readwrite");
+        tx.objectStore("simulations").put({ id: simKey, data: simData });
+      };
+      worker.postMessage({ code: pythonCode, id: simId });
+    }
+
+    // Мини-игра
+    function startGame() {
+      const goal = 1e6;
+      const errorDiv = document.getElementById("error");
+      errorDiv.classList.add("hidden");
+      if (simulations.length === 0) {
+        errorDiv.textContent = "Сначала выполните симуляцию!";
+        errorDiv.classList.remove("hidden");
+        return;
+      }
+      const lastSim = simulations[simulations.length - 1];
+      const score = Math.min(100, Math.log10(lastSim.on_off_ratio) / Math.log10(goal) * 100);
+      let tips = [];
+      if (lastSim.on_off_ratio < goal) {
+        if (parseFloat(document.getElementById("temperature").value) > 200) tips.push("Понизьте температуру (<200 К).");
+        if (parseFloat(document.getElementById("defects").value) > 1e9) tips.push("Уменьшите дефекты (<10⁹ см⁻²).");
+        if (parseFloat(document.getElementById("gateVoltage").value) < 2) tips.push("Увеличьте напряжение затвора (>2 В).");
+        if (document.getElementById("substrate").value === "SiO2") tips.push("Попробуйте подложку Al₂O₃.");
+      }
+      errorDiv.textContent = `Игра: ON/OFF = ${lastSim.on_off_ratio.toFixed(2)} (Цель: ${goal}). Счёт: ${score.toFixed(0)}/100. ${tips.length > 0 ? "Подсказки: " + tips.join(", ") : "Победа!"}`;
+      errorDiv.classList.remove("hidden");
+    }
+
+    // Оптимизация параметров
+    async function optimizeParameters() {
+      const errorDiv = document.getElementById("error");
+      errorDiv.classList.add("hidden");
+      progressBar.style.width = "20%";
+
+      const mobility = parseFloat(document.getElementById("mobility").value);
+      const gate_voltage = parseFloat(document.getElementById("gateVoltage").value);
+      const doping = parseFloat(document.getElementById("doping").value);
+      const temperature = parseFloat(document.getElementById("temperature").value);
+      const defects = parseFloat(document.getElementById("defects").value);
+      const substrate = document.getElementById("substrate").value;
+
+      if (isNaN(mobility) || isNaN(gate_voltage) || isNaN(doping) || isNaN(temperature) || isNaN(defects)) {
+        errorDiv.textContent = "Введите корректные числовые значения для оптимизации!";
+        errorDiv.classList.remove("hidden");
+        progressBar.style.width = "0";
+        return;
+      }
+
+      const pythonCode = `
+import numpy as np
+
+mobility = ${mobility}
+gate_voltage = ${gate_voltage}
+doping = ${doping}
+temperature = ${temperature}
+defects = ${defects}
+substrate = "${substrate}"
+C_ox_values = {"SiO2": 3.45e-6, "Al2O3": 7.96e-6}
+C_ox = C_ox_values[substrate]
+V_th = 0.5
+E_g = 1.0
+k_B = 8.617e-5
+schottky_barrier = 0.3
+
+def objective(mu, V_g, n, T, d):
+    T_factor = np.exp(-E_g / (k_B * T)) if E_g > 0 else 1.0
+    mu_eff = mu * (1 - d * 1e-12) * (300 / T)**0.5
+    tunnel_coeff = np.exp(-1 * 0.1 * E_g - schottky_barrier / (k_B * T)) / (1 + 1 * 0.1)
+    I_on = mu_eff * C_ox * (V_g - V_th - E_g / 2) * 0.5 * (1 + n * 1e-12) * T_factor * tunnel_coeff
+    I_off = mu_eff * C_ox * (0 - V_th - E_g / 2) * 0.5 * (1 + n * 1e-12) * T_factor * tunnel_coeff
+    return -(I_on / max(I_off, 1e-10))
+
+mu = mobility
+V_g = gate_voltage
+n = doping
+T = temperature
+d = defects
+for _ in range(10):
+    grad_mu = (objective(mu + 10, V_g, n, T, d) - objective(mu, V_g, n, T, d)) / 10
+    grad_V_g = (objective(mu, V_g + 0.1, n, T, d) - objective(mu, V_g, n, T, d)) / 0.1
+    grad_n = (objective(mu, V_g, n + 1e11, T, d) - objective(mu, V_g, n, T, d)) / 1e11
+    grad_T = (objective(mu, V_g, n, T + 10, d) - objective(mu, V_g, n, T, d)) / 10
+    grad_d = (objective(mu, V_g, n, T, d + 1e9) - objective(mu, V_g, n, T, d)) / 1e9
+    mu = max(100, mu - 10 * grad_mu)
+    V_g = max(0.1, V_g - 0.1 * grad_V_g)
+    n = max(1e10, n - 1e11 * grad_n)
+    T = max(100, T - 10 * grad_T)
+    d = max(1e8, d - 1e9 * grad_d)
+
+[mu, V_g, n, T, d]
+`;
+
+      progressBar.style.width = "50%";
+      const optId = Date.now();
+      worker.onmessage = (e) => {
+        if (e.data.id !== optId) return;
+        progressBar.style.width = "100%";
+        setTimeout(() => progressBar.style.width = "0", 500);
+        if (e.data.error) {
+          errorDiv.textContent = "Ошибка оптимизации: " + e.data.error;
+          errorDiv.classList.remove("hidden");
+          return;
+        }
+        const [opt_mu, opt_V_g, opt_n, opt_T, opt_d] = e.data.result;
+        document.getElementById("mobility").value = opt_mu.toFixed(0);
+        document.getElementById("gateVoltage").value = opt_V_g.toFixed(1);
+        document.getElementById("doping").value = opt_n.toFixed(0);
+        document.getElementById("temperature").value = opt_T.toFixed(0);
+        document.getElementById("defects").value = opt_d.toFixed(0);
+        previewParameters();
+        runSimulation();
+      };
+      worker.postMessage({ code: pythonCode, id: optId });
+    }
+
+    // Сохранение симуляции
+    function saveSimulation() {
+      if (simulations.length > 0) {
+        document.getElementById("comparison").classList.remove("hidden");
+      }
+    }
+
+    // Сравнение симуляций
+    function toggleComparison() {
+      const comparisonDiv = document.getElementById("comparison");
+      const comparisonOutput = document.getElementById("comparisonOutput");
+      if (simulations.length < 2 && !comparisonDiv.classList.contains("hidden")) {
+        document.getElementById("error").textContent = "Нужно минимум 2 симуляции для сравнения!";
+        document.getElementById("error").classList.remove("hidden");
+        return;
+      }
+      comparisonDiv.classList.toggle("hidden");
+      if (!comparisonDiv.classList.contains("hidden")) {
+        comparisonOutput.innerHTML = simulations.map((sim, i) => `
+          <div class="mb-4 bg-white bg-opacity-20 p-4 rounded-lg">
+            <h3 class="text-xl font-semibold">Симуляция ${i + 1}</h3>
+            <p>КПД: ${sim.efficiency.toFixed(2)}</p>
+            <p>ON/OFF Ratio: ${sim.on_off_ratio.toFixed(2)}</p>
+            <p>DIBL: ${sim.dibl.toFixed(2)} мкА/В</p>
+            <p>Мощность: ${sim.power[50].toFixed(2)} мкВт</p>
+            <p>Квантовая проводимость: ${sim.G_quantum.toFixed(2)} (2e²/h)</p>
+            <img src="data:image/png;base64,${sim.img_base64}" style="max-width: 100%;" />
+          </div>
+        `).join("");
+      }
+    }
+
+    // Экспорт CSV
+    function exportData() {
+      const csv_data = localStorage.getItem("transistor_csv");
+      if (!csv_data) {
+        document.getElementById("error").textContent = "Сначала выполните симуляцию!";
+        document.getElementById("error").classList.remove("hidden");
+        return;
+      }
+      const blob = new Blob([csv_data], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "transistor_data.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Экспорт GDSII JSON
+    function exportGDSII() {
+      const gdsii_data = localStorage.getItem("transistor_gdsii");
+      if (!gdsii_data) {
+        document.getElementById("error").textContent = "Сначала выполните симуляцию!";
+        document.getElementById("error").classList.remove("hidden");
+        return;
+      }
+      const blob = new Blob([gdsii_data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "transistor_gdsii.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Экспорт PDF
+    async function exportPDF() {
+      const errorDiv = document.getElementById("error");
+      errorDiv.classList.add("hidden");
+      progressBar.style.width = "20%";
+
+      const lastSim = simulations[simulations.length - 1];
+      if (!lastSim) {
+        errorDiv.textContent = "Сначала выполните симуляцию!";
+        errorDiv.classList.remove("hidden");
+        progressBar.style.width = "0";
+        return;
+      }
+
+      const latexCode = `
+\\documentclass[a4paper]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage{graphicx}
+\\usepackage{geometry}
+\\geometry{margin=1in}
+\\usepackage{amsmath}
+\\usepackage{xcolor}
+\\usepackage{noto}
+
+\\begin{document}
+
+\\title{Отчёт по симуляции транзистора на 2D-материалах}
+\\author{Aqua Transistor Studio}
+\\date{${new Date().toLocaleDateString()}}
+\\maketitle
+
+\\section{Параметры}
+\\begin{itemize}
+  \\item Подвижность: ${document.getElementById("mobility").value} см\\textsuperscript{2}/В·с
+  \\item Напряжение затвора: ${document.getElementById("gateVoltage").value} В
+  \\item Легирование: ${document.getElementById("doping").value} см\\textsuperscript{-2}
+  \\item Температура: ${document.getElementById("temperature").value} К
+  \\item Дефекты: ${document.getElementById("defects").value} см\\textsuperscript{-2}
+  \\item Подложка: ${document.getElementById("substrate").value}
+\\end{itemize}
+
+\\section{Метрики}
+\\begin{itemize}
+  \\item КПД: ${lastSim.efficiency.toFixed(2)}
+  \\item Субпороговая крутизна: ${lastSim.subthreshold_slope.toFixed(2)} decade/В
+  \\item Частотная характеристика: ${lastSim.freq_response.toFixed(2)} ГГц
+  \\item ON/OFF Ratio: ${lastSim.on_off_ratio.toFixed(2)}
+  \\item DIBL: ${lastSim.dibl.toFixed(2)} мкА/В
+  \\item Мощность (при V_ds=0.5 В): ${lastSim.power[50].toFixed(2)} мкВт
+  \\item Квантовая проводимость: ${lastSim.G_quantum.toFixed(2)} (2e²/h)
+\\end{itemize}
+
+\\section{Результаты}
+\\begin{figure}[h]
+  \\centering
+  \\includegraphics[width=\\textwidth]{data:image/png;base64,${lastSim.img_base64}}
+  \\caption{Вольт-амперная характеристика, схема, карта зарядов, квантовая проводимость.}
+\\end{figure}
+
+\\end{document}
+`;
+
+      progressBar.style.width = "50%";
+      const pdfId = Date.now();
+      worker.onmessage = (e) => {
+        if (e.data.id !== pdfId) return;
+        progressBar.style.width = "100%";
+        setTimeout(() => progressBar.style.width = "0", 500);
+        if (e.data.error) {
+          errorDiv.textContent = "Ошибка экспорта PDF: " + e.data.error;
+          errorDiv.classList.remove("hidden");
+          return;
+        }
+        const pdf
